@@ -82,7 +82,12 @@ export function LeafProvider({ children }: { children: React.ReactNode }) {
       leaf,
     );
 
-    setLeaves(prev => [...prev, leaf]);
+    const newLeaf: LeafList = {
+      ...leaf,
+      createdAt: new Date().toISOString(),
+    };
+
+    setLeaves(prev => [...prev, newLeaf]);
   };
 
   const removeLeaf = async (index: number) => {

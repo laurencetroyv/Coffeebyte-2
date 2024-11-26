@@ -2,7 +2,7 @@ import { CustomContainer } from '@/components';
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { loadTensorflowModel, TensorflowModel } from 'react-native-fast-tflite';
-import { Button } from 'react-native-paper';
+import { Button, Snackbar } from 'react-native-paper';
 import {
   Camera,
   useCameraDevice,
@@ -49,6 +49,8 @@ export default function ScanScreen() {
   const [models, setModels] = useState<ModelProps>();
   const [results, setResults] = useState<ScanResult | null>(null);
   const [image, setImage] = useState<string | undefined>();
+  const [snackbarVisible, setSnackBarVisible] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const context = useLeaf();
   const user = useContext(AuthContext);
 
@@ -135,6 +137,8 @@ export default function ScanScreen() {
         enableAutoRedEyeReduction: false,
       });
 
+      setImage(`file://${photo.path}`);
+
       const resizedPhoto = await resizeImage(`file://${photo.path}`);
 
       const response = await fetch(`file://${photo.path}`);
@@ -169,9 +173,7 @@ export default function ScanScreen() {
 
         // Run models
         const resnetResults = await models!.segmentation.resnet.run(inputData);
-        const diseaseResults = await models!.segmentation.disease.run(
-          inputData,
-        );
+        const diseaseResults = await models!.segmentation.disease.run(inputData);
         const bioticResults = await models!.segmentation.biotic.run(inputData);
         const adagradResults = await models!.classification.run(inputData);
         const classifier = getPrediction(adagradResults);
@@ -188,8 +190,11 @@ export default function ScanScreen() {
           );
 
           setResults({ segmentation: finalResult, classifier: classifier });
-          setImage(`file://${photo.path}`);
         }
+      } else {
+        setSnackBarVisible(true);
+        setSnackbarMessage('Not an image leaf, please try again.');
+        clean();
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -221,7 +226,6 @@ export default function ScanScreen() {
   };
 
   const clean = () => {
-    setModels(undefined);
     setResults(null);
     setImage(undefined);
   };
@@ -239,6 +243,8 @@ export default function ScanScreen() {
       </CustomContainer>
     );
   }
+
+  const onDismissSnackBar = () => setSnackBarVisible(false);
 
   return (
     <View className="flex-1 flex-col items-center justify-center rounded-3xl my-4">
@@ -260,7 +266,7 @@ export default function ScanScreen() {
         )}
       </View>
 
-      {image !== undefined && (
+      {results !== null && (
         <View className="flex flex-col gap-4">
           <Text className="font-medium text-primary text-3xl">
             Disease Name:{' '}
@@ -282,7 +288,7 @@ export default function ScanScreen() {
         </View>
       )}
 
-      {image !== undefined && (
+      {results !== null && (
         <View className="flex flex-row items-center justify-center gap-4 w-full mt-6">
           <Button
             mode="contained"
@@ -296,7 +302,7 @@ export default function ScanScreen() {
           <Button
             mode="contained"
             onPress={async () => {
-              const resizedImage = await resizeImage(image);
+              const resizedImage = await resizeImage(image!);
               const leaf: LeafList = {
                 image: resizedImage.base64,
                 diseasename: results!.classifier.class,
@@ -318,7 +324,7 @@ export default function ScanScreen() {
         </View>
       )}
 
-      {image === undefined && (
+      {results === null && (
         <Text className="mt-16">
           {isProcessing ? 'Processing...' : 'Ready to scan'}
         </Text>
@@ -336,6 +342,13 @@ export default function ScanScreen() {
           </Button>
         </View>
       )}
+
+        <Snackbar
+          visible={snackbarVisible}
+          onDismiss={onDismissSnackBar}
+          className="text-slate-800 dark:text-slate-100">
+          {snackbarMessage}
+        </Snackbar>
     </View>
   );
 }

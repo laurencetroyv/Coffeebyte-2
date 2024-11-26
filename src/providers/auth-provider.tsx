@@ -13,6 +13,7 @@ import React, {
 } from 'react';
 import { CustomContainer } from '@/components';
 import { Text, View } from 'react-native';
+import { Query } from 'react-native-appwrite';
 
 const initialState: AuthContextProps = {
   user: null,
@@ -68,7 +69,7 @@ export const AuthenticationProvider: FC<ProviderProps> = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Error retrieving user from storage:', error);
+      // Do not throw an error when response is empty
     } finally {
       setIsLoading(false);
     }
@@ -96,6 +97,28 @@ export const AuthenticationProvider: FC<ProviderProps> = ({ children }) => {
           email,
           password,
         );
+
+        const roleResponse = await database.listDocuments(
+          process.env.APPWRITE_DATABASE!,
+          process.env.ROLE_COLLECTION!,
+          [
+            Query.and([
+              Query.equal('role', '673ee7be0020a2298fd1'),
+              Query.equal('user', authResponse.userId),
+            ]),
+          ],
+        );
+
+        console.log(
+          'response: ',
+          roleResponse,
+          '\ntotal: ',
+          roleResponse.total,
+        );
+
+        if (roleResponse.total === 1) {
+          Promise.reject('Admin users cannot use the mobile application.');
+        }
 
         const dbResponse = await database.getDocument(
           process.env.APPWRITE_DATABASE!,
@@ -135,13 +158,13 @@ export const AuthenticationProvider: FC<ProviderProps> = ({ children }) => {
 
   const logout = useCallback(async () => {
     try {
-      await AsyncStorage.removeItem('user');
       if (user?.session) {
         try {
           await accounts.deleteSession(user.session);
         } catch (error) {
           console.error('Error deleting session:', error);
         }
+        await AsyncStorage.removeItem('user');
       }
     } catch (error) {
       console.error('Error during logout:', error);

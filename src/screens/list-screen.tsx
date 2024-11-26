@@ -22,7 +22,9 @@ export default function ListsScreen() {
               {formatDate(date)}
             </CustomText>
             {leafs.map((leaf, index) => (
-              <DiagnosisComponent leaf={leaf} key={index} />
+              <View>
+                <DiagnosisComponent leaf={leaf} key={index} />
+              </View>
             ))}
           </View>
         ))}
