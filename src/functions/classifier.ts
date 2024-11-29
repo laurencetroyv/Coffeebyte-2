@@ -17,6 +17,15 @@ export function getPrediction(response: TypedArray[]) {
     }
   }
 
+  console.log(
+    'index',
+    index,
+    'adagradResult: ',
+    response,
+    'maxValue: ',
+    maxValue,
+  );
+
   return {
     class: classes[index],
     confidence: array[index],

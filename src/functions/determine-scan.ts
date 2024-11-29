@@ -28,8 +28,6 @@ export const determineResult = (
         maxValue = value;
       }
     }
-
-    console.log('Max confidence value:', maxValue);
     return maxValue;
   };
 

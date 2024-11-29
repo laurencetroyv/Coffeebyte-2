@@ -8,13 +8,15 @@ import {
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
+import axios from 'axios';
+import { processRoboflowResults } from '@/functions/process-roboflow';
 import { determineResult } from '@/functions/determine-scan';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { EncodingType, readAsStringAsync } from 'expo-file-system';
 import { getPrediction } from '@/functions/classifier';
 import { LeafList, useLeaf } from '@/providers/leaf-provider';
 import { AuthContext } from '@/providers/auth-provider';
-import { TypedArray } from '@/types';
+import { saveResultsToCSV } from '@/functions/to-csv';
 
 interface ModelProps {
   segmentation: {
@@ -134,47 +136,6 @@ export default function ScanScreen() {
     }
   };
 
-  const createImageFromTypedArray = (
-    typedArray: TypedArray,
-    width: number,
-    height: number,
-  ) => {
-    // Convert the TypedArray to Uint8Array if it isn't already
-    const uint8Array = new Uint8Array(typedArray.length);
-
-    // If the array contains floats (0-1), convert to 0-255 range
-    if (
-      typedArray instanceof Float32Array ||
-      typedArray instanceof Float64Array
-    ) {
-      for (let i = 0; i < typedArray.length; i++) {
-        uint8Array[i] = Math.floor(typedArray[i] * 255);
-      }
-    } else {
-      uint8Array.set(typedArray);
-    }
-
-    // Create RGBA data (4 bytes per pixel)
-    const rgbaArray = new Uint8Array(width * height * 4);
-    for (let i = 0; i < uint8Array.length; i++) {
-      const value = uint8Array[i];
-      // Set RGB to the same value for grayscale, and alpha to 255 (fully opaque)
-      rgbaArray[i * 4] = value; // R
-      rgbaArray[i * 4 + 1] = value; // G
-      rgbaArray[i * 4 + 2] = value; // B
-      rgbaArray[i * 4 + 3] = 255; // A
-    }
-
-    // Convert to base64
-    let binary = '';
-    for (let i = 0; i < rgbaArray.length; i++) {
-      binary += String.fromCharCode(rgbaArray[i]);
-    }
-    const base64 = btoa(binary);
-
-    return `data:image/png;base64,${base64}`;
-  };
-
   const handleScan = async () => {
     if (!camera.current || !models!.segmentation.resnet || isProcessing) {
       return;
@@ -195,41 +156,68 @@ export default function ScanScreen() {
       if (image === undefined) {
         setReizedImage(resizedPhoto.base64);
 
-        const resnetResults = await models!.segmentation.resnet.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const diseaseResults = await models!.segmentation.disease.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const bioticResults = await models!.segmentation.biotic.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const adagradResults = await models!.classification.run([
-          resizedPhoto.uint8Array,
-        ]);
+        const roboflowResponse = await axios({
+          method: 'POST',
+          url: 'https://detect.roboflow.com/leaf-detection-r0kih/2',
+          params: {
+            api_key: 'q6cFEnp8I1cJEDtWTU3j',
+          },
+          data: resizedPhoto.base64?.includes('base64,')
+            ? resizedPhoto.base64
+            : `data:image/jpeg;base64,${resizedPhoto.base64}`,
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        });
 
-        console.log('Processing Classifier');
-        const classifier = getPrediction(adagradResults);
+        const roboflowResult = processRoboflowResults(roboflowResponse.data);
 
-        if (
-          resnetResults !== null &&
-          diseaseResults !== null &&
-          bioticResults !== null
-        ) {
-          const finalResult = determineResult(
-            resnetResults,
-            diseaseResults,
-            bioticResults,
-          );
+        if (roboflowResult?.type !== 'NotCoffee Leaf') {
+          const resnetResults = await models!.segmentation.resnet.run([resizedPhoto.uint8Array]);
+          const diseaseResults = await models!.segmentation.disease.run([resizedPhoto.uint8Array]);
+          const bioticResults = await models!.segmentation.biotic.run([resizedPhoto.uint8Array]);
+          const adagradResults = await models!.classification.run([resizedPhoto.uint8Array]);
 
-          setResults({ segmentation: finalResult, classifier: classifier });
+          console.log('Processing Classifier');
+          const classifier = getPrediction(adagradResults);
+
+          if (
+            resnetResults !== null &&
+            diseaseResults !== null &&
+            bioticResults !== null
+          ) {
+            const finalResult = determineResult(
+              resnetResults,
+              diseaseResults,
+              bioticResults,
+            );
+
+            await saveResultsToCSV(
+              resnetResults,
+              diseaseResults,
+              bioticResults,
+              adagradResults,
+              resizedPhoto.base64,
+              resizedPhoto.uint8Array,
+            );
+
+            setResults({ segmentation: finalResult, classifier: classifier });
+          }
+        } else {
+          setSnackBarVisible(true);
+          setSnackbarMessage('Not an image leaf, please try again.');
+          clean();
         }
-      } else {
-        setSnackBarVisible(true);
-        setSnackbarMessage('Not an image leaf, please try again.');
-        clean();
       }
     } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error('Roboflow API Error:', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          headers: error.response?.headers,
+        });
+      }
       console.error('Error during scan:', error);
       throw error;
     } finally {
