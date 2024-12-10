@@ -1,29 +1,20 @@
 import { CustomContainer } from '@/components';
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { loadTensorflowModel, TensorflowModel } from 'react-native-fast-tflite';
-import { Button, Snackbar } from 'react-native-paper';
+import { Button } from 'react-native-paper';
 import {
   Camera,
   useCameraDevice,
   useCameraPermission,
 } from 'react-native-vision-camera';
-import { determineResult } from '@/functions/determine-scan';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { EncodingType, readAsStringAsync } from 'expo-file-system';
-import { getPrediction } from '@/functions/classifier';
 import { LeafList, useLeaf } from '@/providers/leaf-provider';
 import { AuthContext } from '@/providers/auth-provider';
-import { TypedArray } from '@/types';
-
-interface ModelProps {
-  segmentation: {
-    resnet: TensorflowModel;
-    disease: TensorflowModel;
-    biotic: TensorflowModel;
-  };
-  classification: TensorflowModel;
-}
+import { base64ToUint8Array } from '@/functions/base64ToUint8Array';
+import DetectionCanvas from '@/components/detection-view';
+import axios from 'axios';
 
 interface ScanResult {
   segmentation: {
@@ -44,14 +35,19 @@ export default function ScanScreen() {
   const device = useCameraDevice('back');
   const camera = useRef<Camera>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [models, setModels] = useState<ModelProps>();
+  const [models, setModels] = useState<TensorflowModel>();
   const [results, setResults] = useState<ScanResult | null>(null);
   const [image, setImage] = useState<string | undefined>();
   const [resizedImage, setReizedImage] = useState('');
-  const [snackbarVisible, setSnackBarVisible] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
   const context = useLeaf();
   const user = useContext(AuthContext);
+  const [processed, setProcessed] = useState<
+    {
+      classId: number;
+      bbox: number[];
+      confidence: number;
+    }[]
+  >();
 
   // Load models on component mount
   useEffect(() => {
@@ -59,27 +55,10 @@ export default function ScanScreen() {
       setIsModelLoading(true);
       try {
         const resnetModel = await loadTensorflowModel(
-          require('../../../assets/models/segmentation/resnet.tflite'),
-        );
-        const diseaseModel = await loadTensorflowModel(
-          require('../../../assets/models/segmentation/disease.tflite'),
-        );
-        const bioticModel = await loadTensorflowModel(
-          require('../../../assets/models/segmentation/biotic.tflite'),
+          require('../../../assets/models/best_float32.tflite'),
         );
 
-        const adagradModel = await loadTensorflowModel(
-          require('../../../assets/models/classification/adagrad.tflite'),
-        );
-
-        setModels({
-          classification: adagradModel,
-          segmentation: {
-            resnet: resnetModel,
-            disease: diseaseModel,
-            biotic: bioticModel,
-          },
-        });
+        setModels(resnetModel);
         setIsModelLoading(false);
       } catch (error) {
         console.error('Error loading models:', error);
@@ -89,15 +68,6 @@ export default function ScanScreen() {
     loadModels();
   }, []);
 
-  const base64ToUint8Array = (base64: string): Uint8Array => {
-    const binaryString = atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  };
-
   const resizeImage = async (imagePath: string) => {
     try {
       const manipulateResult = await manipulateAsync(
@@ -105,8 +75,8 @@ export default function ScanScreen() {
         [
           {
             resize: {
-              width: 256,
-              height: 512,
+              width: 640,
+              height: 640,
             },
           },
         ],
@@ -134,49 +104,29 @@ export default function ScanScreen() {
     }
   };
 
-  const createImageFromTypedArray = (
-    typedArray: TypedArray,
-    width: number,
-    height: number,
-  ) => {
-    // Convert the TypedArray to Uint8Array if it isn't already
-    const uint8Array = new Uint8Array(typedArray.length);
+  const analyzeImage = async (base64Image: string) => {
+    try {
+      const response = await axios.post('http://192.168.1.6:5001/predict', {
+        image: `data:image/png;base64,${base64Image}`,
+      });
 
-    // If the array contains floats (0-1), convert to 0-255 range
-    if (
-      typedArray instanceof Float32Array ||
-      typedArray instanceof Float64Array
-    ) {
-      for (let i = 0; i < typedArray.length; i++) {
-        uint8Array[i] = Math.floor(typedArray[i] * 255);
-      }
-    } else {
-      uint8Array.set(typedArray);
+      console.log('result: ', response.data);
+
+      return {
+        result: response.data.results,
+        image: response.data.image,
+      };
+    } catch (err) {
+      console.error(err);
     }
-
-    // Create RGBA data (4 bytes per pixel)
-    const rgbaArray = new Uint8Array(width * height * 4);
-    for (let i = 0; i < uint8Array.length; i++) {
-      const value = uint8Array[i];
-      // Set RGB to the same value for grayscale, and alpha to 255 (fully opaque)
-      rgbaArray[i * 4] = value; // R
-      rgbaArray[i * 4 + 1] = value; // G
-      rgbaArray[i * 4 + 2] = value; // B
-      rgbaArray[i * 4 + 3] = 255; // A
-    }
-
-    // Convert to base64
-    let binary = '';
-    for (let i = 0; i < rgbaArray.length; i++) {
-      binary += String.fromCharCode(rgbaArray[i]);
-    }
-    const base64 = btoa(binary);
-
-    return `data:image/png;base64,${base64}`;
   };
 
   const handleScan = async () => {
-    if (!camera.current || !models!.segmentation.resnet || isProcessing) {
+    if (!camera.current || isProcessing) {
+      return;
+    }
+
+    if (models === undefined) {
       return;
     }
 
@@ -188,49 +138,18 @@ export default function ScanScreen() {
         flash: 'off',
         enableAutoRedEyeReduction: false,
       });
+
       const resizedPhoto = await resizeImage(`file://${photo.path}`);
 
-      setImage(`file://${photo.path}`);
+      setReizedImage(resizedPhoto.base64);
+      setImage(resizedPhoto.base64);
 
-      if (image === undefined) {
-        setReizedImage(resizedPhoto.base64);
-
-        const resnetResults = await models!.segmentation.resnet.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const diseaseResults = await models!.segmentation.disease.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const bioticResults = await models!.segmentation.biotic.run([
-          resizedPhoto.uint8Array,
-        ]);
-        const adagradResults = await models!.classification.run([
-          resizedPhoto.uint8Array,
-        ]);
-
-        console.log('Processing Classifier');
-        const classifier = getPrediction(adagradResults);
-
-        if (
-          resnetResults !== null &&
-          diseaseResults !== null &&
-          bioticResults !== null
-        ) {
-          const finalResult = determineResult(
-            resnetResults,
-            diseaseResults,
-            bioticResults,
-          );
-
-          setResults({ segmentation: finalResult, classifier: classifier });
-        }
-      } else {
-        setSnackBarVisible(true);
-        setSnackbarMessage('Not an image leaf, please try again.');
-        clean();
-      }
+      const response = await analyzeImage(resizedPhoto.base64);
+      console.log(response?.result);
+      clean();
     } catch (error) {
       console.error('Error during scan:', error);
+      clean();
       throw error;
     } finally {
       setIsProcessing(false);
@@ -253,6 +172,7 @@ export default function ScanScreen() {
   const clean = () => {
     setResults(null);
     setImage(undefined);
+    setProcessed(undefined);
   };
 
   if (!hasPermission) {
@@ -269,12 +189,12 @@ export default function ScanScreen() {
     );
   }
 
-  const onDismissSnackBar = () => setSnackBarVisible(false);
+  // const onDismissSnackBar = () => setSnackBarVisible(false);
 
   return (
     <View className="flex-1 flex-col items-center justify-center rounded-3xl my-4">
-      <View className="w-[400px] h-[450px] mt-16 items-center">
-        {image === undefined ? (
+      {processed === undefined && (
+        <View className="w-[400px] h-[450px] mt-16 items-center">
           <Camera
             ref={camera}
             photo={true}
@@ -283,15 +203,19 @@ export default function ScanScreen() {
             isActive={true}
             resizeMode="contain"
           />
-        ) : (
-          <Image
-            source={{ uri: image }}
-            style={{ width: 350, height: 350, borderRadius: 50 }}
-          />
-        )}
-      </View>
+        </View>
+      )}
 
-      {results !== null && (
+      {processed !== undefined && (
+        <DetectionCanvas
+          base64Image={resizedImage}
+          detections={processed}
+          width={640}
+          height={640}
+        />
+      )}
+
+      {/* {results !== null && (
         <View className="flex flex-col gap-4">
           <Text className="font-medium text-primary text-3xl">
             Disease Name:{' '}
@@ -311,9 +235,9 @@ export default function ScanScreen() {
             </Text>
           </Text>
         </View>
-      )}
+      )} */}
 
-      {results !== null && (
+      {processed !== undefined && (
         <View className="flex flex-row items-center justify-center gap-4 w-full mt-6">
           <Button
             mode="contained"
@@ -366,13 +290,6 @@ export default function ScanScreen() {
           </Button>
         </View>
       )}
-
-      <Snackbar
-        visible={snackbarVisible}
-        onDismiss={onDismissSnackBar}
-        className="text-slate-800 dark:text-slate-100">
-        {snackbarMessage}
-      </Snackbar>
     </View>
   );
 }
