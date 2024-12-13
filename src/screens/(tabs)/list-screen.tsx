@@ -1,12 +1,13 @@
 import React from 'react';
-import { CustomContainer, CustomText, DiagnosisComponent } from '../components';
-import { View } from 'react-native';
-import { formatDate, groupDiagnosesByDate } from '../functions/helper';
+import { TouchableOpacity, View } from 'react-native';
 import { useLeaf } from '@/providers/leaf-provider';
+import { CustomContainer, CustomText, DiagnosisComponent } from '@/components';
+import { formatDate, groupDiagnosesByDate } from '@/functions/helper';
+import { useNavigation } from '@react-navigation/native';
 
 export default function ListsScreen() {
+  const navigation = useNavigation()
   const context = useLeaf();
-
   const leaves = groupDiagnosesByDate(context.leaves);
 
   return (
@@ -22,9 +23,11 @@ export default function ListsScreen() {
               {formatDate(date)}
             </CustomText>
             {leafs.map((leaf, index) => (
-              <View>
+              <TouchableOpacity
+              key={`${date}-${index}`}
+                onPress={() => navigation.navigate('leaf', { leaf })}>
                 <DiagnosisComponent leaf={leaf} key={index} />
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         ))}

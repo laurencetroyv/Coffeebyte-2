@@ -37,8 +37,7 @@ export default function SignIn() {
           <CustomTextInput
             autoComplete="password"
             placeholder="Password"
-            secureTextEntry
-            onChangeText={value => setPassword(value)}
+            secureTextEntry={true}
           />
         </View>
 
