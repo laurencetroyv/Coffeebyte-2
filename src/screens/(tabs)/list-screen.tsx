@@ -6,7 +6,7 @@ import { formatDate, groupDiagnosesByDate } from '@/functions/helper';
 import { useNavigation } from '@react-navigation/native';
 
 export default function ListsScreen() {
-  const navigation = useNavigation()
+  const navigation = useNavigation();
   const context = useLeaf();
   const leaves = groupDiagnosesByDate(context.leaves);
 

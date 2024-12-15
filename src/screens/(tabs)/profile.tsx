@@ -1,7 +1,7 @@
 import { useColorScheme } from 'nativewind';
 import React, { useContext, useState } from 'react';
 import { Image, View } from 'react-native';
-import { Button, Dialog, Portal, Snackbar } from 'react-native-paper';
+import { Button, Dialog, Portal } from 'react-native-paper';
 import { AuthContext } from '../../providers/auth-provider';
 import {
   CustomContainer,

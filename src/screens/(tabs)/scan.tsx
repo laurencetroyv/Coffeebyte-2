@@ -84,7 +84,7 @@ export default function ScanScreen() {
     base64Image: string,
   ): Promise<Result | undefined> => {
     try {
-      const response = await axios.post('http://192.168.1.2:5001/predict', {
+      const response = await axios.post('http://143.198.84.145:5001/predict', {
         image: `data:image/png;base64,${base64Image}`,
       });
 
@@ -207,7 +207,6 @@ export default function ScanScreen() {
         setResult(response);
 
         const process = processResults(response.results);
-        console.log(process);
         setProcessResult(process);
       }
     } catch (error) {
