@@ -1,6 +1,5 @@
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { EncodingType, readAsStringAsync } from 'expo-file-system';
-import { base64ToUint8Array } from '@/functions/base64ToUint8Array';
 
 export const resizeImage = async (imagePath: string) => {
   try {
@@ -24,13 +23,9 @@ export const resizeImage = async (imagePath: string) => {
       encoding: EncodingType.Base64,
     });
 
-    // Convert base64 to Uint8Array
-    const uint8Array = base64ToUint8Array(base64);
-
     return {
       ...manipulateResult,
       base64,
-      uint8Array,
     };
   } catch (error) {
     throw error;
