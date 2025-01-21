@@ -13,17 +13,6 @@ import { processResults } from '@/functions/process-result';
 import { resizeImage } from '@/functions/resize-image';
 import { analyzeImage } from '@/functions/analyze-image';
 
-interface ProcessResult {
-  disease: {
-    class: string;
-    confidence: number;
-  };
-  severities: {
-    className: string;
-    confidence: number;
-  };
-}
-
 export default function ScanScreen() {
   const context = useLeaf();
   const user = useContext(AuthContext);
@@ -33,7 +22,7 @@ export default function ScanScreen() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [image, setImage] = useState<string | undefined>();
   const [result, setResult] = useState<Result>();
-  const [processResult, setProcessResult] = useState<ProcessResult>();
+  const [severityLabel, setSeverityLabel] = useState('');
 
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -59,9 +48,6 @@ export default function ScanScreen() {
 
       if (response !== undefined) {
         setResult(response);
-
-        const process = processResults(response.results);
-        setProcessResult(process);
       }
     } catch (error) {
       throw error;
@@ -71,7 +57,6 @@ export default function ScanScreen() {
   const clean = () => {
     setResult(undefined);
     setImage(undefined);
-    setProcessResult(undefined);
   };
 
   if (!hasPermission) {
@@ -102,21 +87,21 @@ export default function ScanScreen() {
 
       {result !== undefined && (
         <Image
-          source={{ uri: result?.image }}
+          source={{ uri: result?.segmented_image }}
           className="w-[400px] h-[450px] mt-16 items-center rounded-md p-4 mb-16"
         />
       )}
 
-      {processResult !== undefined && (
+      {result !== undefined && (
         <View className="flex flex-col gap-4">
           <Text className="font-medium text-primary text-3xl">
             Disease Name:{' '}
-            <Text className="font-normal">{processResult.disease.class}</Text>
+            <Text className="font-normal">{result.classname}</Text>
           </Text>
           <Text className="font-medium text-primary text-3xl">
             Severity:{' '}
             <Text className="font-normal">
-              {((processResult.severities.confidence as number) * 100).toFixed(
+              {((result.severity) * 100).toFixed(
                 2,
               ) + '%'}
             </Text>
@@ -124,7 +109,7 @@ export default function ScanScreen() {
           <Text className="font-medium text-primary text-3xl">
             Rating Label:{' '}
             <Text className="font-normal">
-              {processResult.severities.className}
+              {severityLabel}
             </Text>
           </Text>
         </View>
@@ -144,13 +129,13 @@ export default function ScanScreen() {
           <Button
             mode="contained"
             onPress={async () => {
-              if (processResult !== undefined) {
+              if (result !== undefined) {
                 try {
                   const leaf: LeafList = {
-                    image: result.image,
-                    diseasename: processResult.disease.class,
-                    severity: processResult.severities.confidence * 100,
-                    label: processResult.severities.className,
+                    image: result.segmented_image,
+                    diseasename: result.classname,
+                    severity: result.severity,
+                    label: severityLabel,
                     user: user.user!.id,
                   };
 
