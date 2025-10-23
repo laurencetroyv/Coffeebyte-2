@@ -2642,10 +2642,10 @@
   resolved "https://registry.npmjs.org/@react-native/normalize-colors/-/normalize-colors-0.75.4.tgz"
   integrity sha512-90QrQDLg0/k9xqYesaKuIkayOSjD+FKa0hsHollbwT5h3kuGMY+lU7UZxnb8tU55Y1PKdvjYxqQsYWI/ql79zA==
 
-"@react-native/typescript-config@0.75.4":
-  version "0.75.4"
-  resolved "https://registry.npmjs.org/@react-native/typescript-config/-/typescript-config-0.75.4.tgz"
-  integrity sha512-0849BqSIDGYltqMbniZg1MvDSFO5KMQsmIKpGzioTm3+SF73Ec1LihA1CtpJyZFonEclKXEIawRTNh2bxGgJJQ==
+"@react-native/typescript-config@0.82.1":
+  version "0.82.1"
+  resolved "https://registry.npmjs.org/@react-native/typescript-config/-/typescript-config-0.82.1.tgz"
+  integrity sha512-kCTjmBg44p0kqU4xEMg7l6SNJyHWTHuTqiT9MpHasEYcnVpBWyEQsSQAiVKONHwcUWcAktrGVLE1dYGfBmPJ3Q==
 
 "@react-native/virtualized-lists@0.73.4":
   version "0.73.4"
@@ -6714,22 +6714,22 @@ lightningcss-linux-arm64-musl@1.29.1:
 
 lightningcss-linux-x64-gnu@1.19.0:
   version "1.19.0"
-  resolved "https://registry.yarnpkg.com/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.19.0.tgz#02bec89579ab4153dccc0def755d1fd9e3ee7f3c"
+  resolved "https://registry.npmjs.org/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.19.0.tgz"
   integrity sha512-0AFQKvVzXf9byrXUq9z0anMGLdZJS+XSDqidyijI5njIwj6MdbvX2UZK/c4FfNmeRa2N/8ngTffoIuOUit5eIQ==
 
 lightningcss-linux-x64-gnu@1.29.1:
   version "1.29.1"
-  resolved "https://registry.yarnpkg.com/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.29.1.tgz#98fc5df5e39ac8ddc51e51f785849eb21131f789"
+  resolved "https://registry.npmjs.org/lightningcss-linux-x64-gnu/-/lightningcss-linux-x64-gnu-1.29.1.tgz"
   integrity sha512-u1S+xdODy/eEtjADqirA774y3jLcm8RPtYztwReEXoZKdzgsHYPl0s5V52Tst+GKzqjebkULT86XMSxejzfISw==
 
 lightningcss-linux-x64-musl@1.19.0:
   version "1.19.0"
-  resolved "https://registry.yarnpkg.com/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.19.0.tgz#e36a5df8193ae961d22974635e4c100a1823bb8c"
+  resolved "https://registry.npmjs.org/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.19.0.tgz"
   integrity sha512-SJoM8CLPt6ECCgSuWe+g0qo8dqQYVcPiW2s19dxkmSI5+Uu1GIRzyKA0b7QqmEXolA+oSJhQqCmJpzjY4CuZAg==
 
 lightningcss-linux-x64-musl@1.29.1:
   version "1.29.1"
-  resolved "https://registry.yarnpkg.com/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.29.1.tgz#fb4f80895ba7dfa8048ee32e9716a1684fefd6b2"
+  resolved "https://registry.npmjs.org/lightningcss-linux-x64-musl/-/lightningcss-linux-x64-musl-1.29.1.tgz"
   integrity sha512-L0Tx0DtaNUTzXv0lbGCLB/c/qEADanHbu4QdcNOXLIe1i8i22rZRpbT3gpWYsCh9aSL9zFujY/WmEXIatWvXbw==
 
 lightningcss-win32-arm64-msvc@1.29.1:
@@ -6739,12 +6739,12 @@ lightningcss-win32-arm64-msvc@1.29.1:
 
 lightningcss-win32-x64-msvc@1.19.0:
   version "1.19.0"
-  resolved "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.19.0.tgz"
+  resolved "https://registry.yarnpkg.com/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.19.0.tgz#0854dbd153035eca1396e2227c708ad43655a61c"
   integrity sha512-C+VuUTeSUOAaBZZOPT7Etn/agx/MatzJzGRkeV+zEABmPuntv1zihncsi+AyGmjkkzq3wVedEy7h0/4S84mUtg==
 
 lightningcss-win32-x64-msvc@1.29.1:
   version "1.29.1"
-  resolved "https://registry.npmjs.org/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.29.1.tgz"
+  resolved "https://registry.yarnpkg.com/lightningcss-win32-x64-msvc/-/lightningcss-win32-x64-msvc-1.29.1.tgz#54dcd52884f6cbf205a53d49239559603f194927"
   integrity sha512-NygcbThNBe4JElP+olyTI/doBNGJvLs3bFCRPdvuCcxZCcCZ71B858IHpdm7L1btZex0FvCmM17FK98Y9MRy1Q==
 
 lightningcss@^1.27.0:
